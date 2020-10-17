@@ -12,7 +12,7 @@ import (
 type Users struct {
 	NewView   *views.View
 	LoginView *views.View
-	us        *models.UserService
+	us        models.UserService
 }
 
 type RegisterForm struct {
@@ -26,7 +26,7 @@ type LoginForm struct {
 	Password string `schema:"password"`
 }
 
-func NewUsers(us *models.UserService) *Users {
+func NewUsers(us models.UserService) *Users {
 	return &Users{
 		NewView: views.NewView(
 			"bootstrap",
@@ -87,7 +87,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		switch err {
 		case models.ErrNotFound:
 			fmt.Fprintln(w, "invalid email address")
-		case models.ErrInvalodPassword:
+		case models.ErrPasswordInvalid:
 			fmt.Fprintln(w, "invalid password provided")
 		default:
 			http.Error(w, err.Error(), http.StatusInternalServerError)
