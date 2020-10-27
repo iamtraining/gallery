@@ -1,9 +1,13 @@
 package views
 
 import (
+	"bytes"
 	"html/template"
+	"io"
 	"net/http"
 	"path/filepath"
+
+	"github.com/iamtraining/gallery/context"
 )
 
 var (
@@ -32,9 +36,31 @@ func NewView(layout string, files ...string) *View {
 	}
 }
 
-func (v *View) Render(w http.ResponseWriter, data interface{}) error {
+func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) {
 	w.Header().Set("Content-Type", "text/html")
-	return v.Tmpl.ExecuteTemplate(w, v.Layout, data)
+
+	var d Data
+
+	switch ok := data.(type) {
+	case Data:
+		d = ok
+	default:
+		data = Data{
+			Body: data,
+		}
+	}
+
+	d.User = context.GetUser(r.Context())
+
+	var buf bytes.Buffer
+
+	err := v.Tmpl.ExecuteTemplate(&buf, v.Layout, data)
+	if err != nil {
+		http.Error(w, "something goes wrong", http.StatusInternalServerError)
+		return
+	}
+
+	io.Copy(w, &buf)
 }
 
 func extract() []string {
@@ -47,9 +73,7 @@ func extract() []string {
 }
 
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := v.Render(w, nil); err != nil {
-		panic(err)
-	}
+	v.Render(w, r, nil)
 }
 
 func addTemplatePath(files []string) {

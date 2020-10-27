@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 
@@ -13,16 +12,16 @@ import (
 )
 
 var (
-	ErrNotFound              = errors.New("models: resource not found")
-	ErrIDInvalid             = errors.New("models: ID provided was invalid")
-	ErrPasswordRequired      = errors.New("models: password is required")
-	ErrPasswordShort         = errors.New("models: password must be at least 8 characters long")
-	ErrPasswordInvalid       = errors.New("models: incorrect password provided")
-	ErrEmailRequired         = errors.New("models: email address is required")
-	ErrEmailInvalid          = errors.New("models: email address is not valid")
-	ErrEmailAlreadyTaken     = errors.New("models: email address is already taken")
-	ErrRememberTokenRequired = errors.New("models: remember token is required")
-	ErrRememberTokenTooShort = errors.New("models: remember token must be at least 32 bytes")
+	ErrNotFound              modelError = "models: resource not found"
+	ErrIDInvalid             modelError = "models: ID provided was invalid"
+	ErrPasswordRequired      modelError = "models: password is required"
+	ErrPasswordShort         modelError = "models: password must be at least 8 characters long"
+	ErrPasswordInvalid       modelError = "models: incorrect password provided"
+	ErrEmailRequired         modelError = "models: email address is required"
+	ErrEmailInvalid          modelError = "models: email address is not valid"
+	ErrEmailAlreadyTaken     modelError = "models: email address is already taken"
+	ErrRememberTokenRequired modelError = "models: remember token is required"
+	ErrRememberTokenTooShort modelError = "models: remember token must be at least 32 bytes"
 )
 
 var userPwPepper = "secret-random-string"
@@ -68,43 +67,22 @@ type UserDB interface {
 	ByEmail(email string) (*User, error)
 	ByRemember(token string) (*User, error)
 
-	// close a db connection
-	Close() error
-
-	//migration helpers
-	AutoMigrate() error
-	DestructiveReset() error
-
 	// altering users methods
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id uint) error
 }
 
-func NewUserService(conninfo string) (UserService, error) {
-	ug, err := newUserGorm(conninfo)
-	if err != nil {
-		return nil, err
-	}
+type modelError string
 
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{db}
 	hmac := hash.NewHMAC(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 
 	return &userService{
 		UserDB: uv,
-	}, nil
-}
-
-func newUserGorm(conninfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", conninfo)
-	if err != nil {
-		return nil, err
 	}
-	db.LogMode(true)
-
-	return &userGorm{
-		db: db,
-	}, nil
 }
 
 func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
@@ -117,10 +95,6 @@ func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
 	}
 }
 
-func (ug *userGorm) Close() error {
-	return ug.db.Close()
-}
-
 func (ug *userGorm) ByID(id uint) (*User, error) {
 	var user User
 	db := ug.db.Where("id = ?", id)
@@ -129,15 +103,6 @@ func (ug *userGorm) ByID(id uint) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
-}
-
-func (ug *userGorm) DestructiveReset() error {
-	err := ug.db.DropTableIfExists(&User{}).Error
-	if err != nil {
-		return err
-	}
-
-	return ug.AutoMigrate()
 }
 
 func (ug *userGorm) Create(u *User) error {
@@ -168,14 +133,6 @@ func (ug *userGorm) Update(u *User) error {
 func (ug *userGorm) Delete(id uint) error {
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
-}
-
-func (ug *userGorm) AutoMigrate() error {
-	if err := ug.db.AutoMigrate(&User{}).Error; err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (us *userService) Authentificate(email, password string) (*User, error) {
@@ -441,4 +398,15 @@ func (uv *userValidator) rememberHashRequired(user *User) error {
 	}
 
 	return nil
+}
+
+func (e modelError) Error() string {
+	return string(e)
+}
+
+func (e modelError) Public() string {
+	s := strings.Replace(string(e), "models: ", "", 1)
+	split := strings.Split(s, " ")
+	split[0] = strings.Title(split[0])
+	return strings.Join(split, " ")
 }

@@ -1,0 +1,59 @@
+{{define "body"}}
+<div class="row">
+	<div class="col-md-10 col-md-offset-1">
+		<h2>Edit your gallery</h2>
+		<a href="/galleries/{{.ID}}">
+			View this gallery
+		</a>
+		<hr>
+	</div>
+<h3>Edit your gallery</h3>
+<form action="/galleries/{{.ID}}/update" method="POST">
+	<div class="form-group">
+		<label for="title">Title</label>
+		<input type="text" name="title" class="form-control" id="title" placeholder="What is the title of your gallery?" value="{{.Title}}">
+	</div>
+	<button type="submit" class="btn btn-primary">Update</button>
+</form>
+
+<form action="/galleries/{{.GalleryID}}/images/{{.Filename}}/delete" method="POST">
+	<button type="submit" class="btn btn-danger">Delete</button>
+</form>
+
+{{template "img"}}
+{{range .Img}}
+	<img src="{{.}}">
+{{end}}
+{{end}}
+
+{{define "img"}}
+<form action="/galleries/{{.ID}}/images" method="POST"
+	enctype="multipart/form-data" class="form-horizontal">
+	<div class="form-group">
+		<label for="images" class="col-md-1 control-label">Add Images</label>
+		<div class="col-md-10">
+			<input type="file" multiple="multiple" id="images" name="images">
+			<p class="help-block">Please only use jpg, jpeg, and png.</p>
+			<button type="submit" class="btn btn-primary">Upload</button>
+		</div>
+	</div>
+</form>
+</div>
+{{end}}
+
+{{define "gallery"}}
+{{range .Split 6}}
+	<div class="col-md-2">
+		{{range .}}
+			<a href="{{.Path}}">
+				<img src="{{.Path}}" class="thumbnail">
+			</a>
+		{{end}}
+	</div>
+{{end}}
+<style>
+	.thumbnail {
+		width: 100%;
+	}
+</style>
+{{end}}

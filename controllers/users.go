@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/iamtraining/gallery/models"
@@ -42,17 +43,21 @@ func NewUsers(us models.UserService) *Users {
 
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
+	u.NewView.Render(w, r, nil)
+
 }
 
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
+	var data views.Data
+
 	var form RegisterForm
 
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		log.Println(err)
+		data.SetAlert(err)
+		u.NewView.Render(w, r, data)
+		return
 	}
 
 	user := models.User{
@@ -62,46 +67,51 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := u.us.Create(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		data.SetAlert(err)
+		u.NewView.Render(w, r, data)
 		return
 	}
 
 	err := u.signIn(w, &user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 
-	http.Redirect(w, r, "/cookietest", http.StatusFound)
+	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	var data views.Data
+
 	var form LoginForm
 
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		data.SetAlert(err)
+		u.LoginView.Render(w, r, data)
+		return
 	}
 
 	user, err := u.us.Authentificate(form.Email, form.Password)
 	if err != nil {
 		switch err {
 		case models.ErrNotFound:
-			fmt.Fprintln(w, "invalid email address")
-		case models.ErrPasswordInvalid:
-			fmt.Fprintln(w, "invalid password provided")
+			data.CreateErrorAlert("invalid email address")
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			data.SetAlert(err)
 		}
+		u.LoginView.Render(w, r, data)
 		return
 	}
 
 	err = u.signIn(w, user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		data.SetAlert(err)
+		u.LoginView.Render(w, r, data)
 		return
 	}
 
-	http.Redirect(w, r, "cookietest", http.StatusFound)
+	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
 func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
