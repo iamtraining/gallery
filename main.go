@@ -38,18 +38,18 @@ func main() {
 	uc := controllers.NewUsers(serv.User)
 	gc := controllers.NewGalleries(serv.Gallery, serv.Img, r)
 
-	userMw1 := middleware.RequireUser{}
+	require := middleware.RequireUser{}
 
-	userMw2 := middleware.User{
+	mw := middleware.User{
 		UserService: serv.User,
 	}
 
-	newGallery := userMw1.Apply(gc.New)
-	createGallery := userMw1.ApplyFn(gc.Create)
+	//newGallery := userMw1.Apply(gc.New)
+	//createGallery := userMw1.ApplyFn(gc.Create)
 
 	r.NotFoundHandler = notfound()
-	r.HandleFunc("/", static.Home.ServeHTTP).Methods("GET")
-	r.HandleFunc("/contact", static.Contact.ServeHTTP).Methods("GET")
+	r.Handle("/", static.Home).Methods("GET")
+	r.Handle("/contact", static.Contact).Methods("GET")
 	r.HandleFunc("/faq", faq).Methods("GET")
 
 	// user
@@ -60,22 +60,30 @@ func main() {
 	r.HandleFunc("/cookietest", uc.CookieTest).Methods("GET")
 
 	// gallery
-	r.Handle("/galleries/new", newGallery).Methods("GET")
-	r.HandleFunc("/galleries", createGallery).Methods("POST").Name(controllers.IndexGallery)
-	r.HandleFunc("/galleries/{id:[0-9]+}", gc.ShowView.ServeHTTP).
+	r.Handle("/galleries/new", require.Apply(gc.New)).Methods("GET")
+	r.Handle("/galleries", require.ApplyFn(gc.Index)).
+		Methods("GET").Name(controllers.IndexGallery)
+	r.HandleFunc("/galleries/{id:[0-9]+}", gc.Show).
 		Methods("GET").Name(controllers.ShowGallery)
-	r.HandleFunc("/galleries/{id:[0-9]+}/edit", userMw1.ApplyFn(gc.Edit)).Methods("GET").Name(controllers.EditGallery)
-	r.HandleFunc("/galleries/{id:[0-9]+}/update", userMw1.ApplyFn(gc.Update)).Methods("POST")
-	r.HandleFunc("/galleries/{id:[0-9]+}/delete", userMw1.ApplyFn(gc.Delete)).Methods("POST")
-	r.Handle("/galleries", userMw1.ApplyFn(gc.Index)).Methods("GET")
-	r.HandleFunc("/galleries/{id:[0-9]+}/images", userMw1.ApplyFn(gc.UploadImg)).Methods("POST")
-	r.HandleFunc("/galleries/{id:[0-9]+}/images/{filename}/delete", userMw1.ApplyFn(gc.ImgDelete)).Methods("POST")
+	r.Handle("/galleries", require.ApplyFn(gc.Create)).
+		Methods("POST")
+	r.HandleFunc("/galleries/{id:[0-9]+}/edit", require.ApplyFn(gc.Edit)).
+		Methods("GET").Name(controllers.EditGallery)
+	r.HandleFunc("/galleries/{id:[0-9]+}/update", require.ApplyFn(gc.Update)).
+		Methods("POST")
+	r.HandleFunc("/galleries/{id:[0-9]+}/delete", require.ApplyFn(gc.Delete)).
+		Methods("POST")
+	r.HandleFunc("/galleries/{id:[0-9]+}/images", require.ApplyFn(gc.UploadImg)).
+		Methods("POST")
+	r.HandleFunc("/galleries/{id:[0-9]+}/images/{filename}/delete",
+		require.ApplyFn(gc.ImgDelete)).
+		Methods("POST")
 
 	// fileserver
 	imgHandler := http.FileServer(http.Dir("./images/"))
 	r.PathPrefix("/images").Handler(http.StripPrefix("/images", imgHandler))
 
-	http.ListenAndServe(":3000", userMw2.Apply(r))
+	http.ListenAndServe(":3000", mw.Apply(r))
 }
 
 func faq(w http.ResponseWriter, r *http.Request) {

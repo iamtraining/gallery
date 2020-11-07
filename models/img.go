@@ -85,7 +85,7 @@ func (i *Img) Path() string {
 
 func (i *Img) RelativePath() string {
 	galleryID := fmt.Sprintf("%v", i.GalleryID)
-	return filepath.ToSlash(filepath.Join("images", "galleries", galleryID, i.Filename))
+	return filepath.Join("images", "galleries", galleryID, i.Filename)
 }
 
 func (is *imgService) Delete(i *Img) error {

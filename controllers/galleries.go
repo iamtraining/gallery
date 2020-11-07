@@ -221,20 +221,20 @@ func (g *Galleries) Index(w http.ResponseWriter, r *http.Request) {
 
 // POST /galleries/:id/images -- jpg jpeg png
 func (g *Galleries) UploadImg(w http.ResponseWriter, r *http.Request) {
-	galelry, err := g.galleryByID(w, r)
+	gallery, err := g.galleryByID(w, r)
 	if err != nil {
 		return
 	}
 
 	user := context.GetUser(r.Context())
 
-	if galelry.UserID != user.ID {
+	if gallery.UserID != user.ID {
 		http.Error(w, "gallery not found", http.StatusNotFound)
 		return
 	}
 
 	var data views.Data
-	data.Body = galelry
+	data.Body = gallery
 
 	err = r.ParseMultipartForm(Multipart)
 	if err != nil {
@@ -243,7 +243,7 @@ func (g *Galleries) UploadImg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files := r.MultipartForm.File["files"]
+	files := r.MultipartForm.File["images"]
 
 	for _, f := range files {
 		file, err := f.Open()
@@ -255,7 +255,7 @@ func (g *Galleries) UploadImg(w http.ResponseWriter, r *http.Request) {
 
 		defer file.Close()
 
-		err = g.i.Create(galelry.ID, file, f.Filename)
+		err = g.i.Create(gallery.ID, file, f.Filename)
 		if err != nil {
 			data.SetAlert(err)
 			g.EditView.Render(w, r, data)

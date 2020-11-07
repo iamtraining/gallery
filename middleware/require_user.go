@@ -7,9 +7,7 @@ import (
 	"github.com/iamtraining/gallery/models"
 )
 
-type RequireUser struct {
-	models.UserService
-}
+type RequireUser struct{}
 
 type User struct {
 	models.UserService

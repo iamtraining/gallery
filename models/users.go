@@ -221,7 +221,7 @@ func (uv *userValidator) Delete(id uint) error {
 	var user User
 	user.ID = id
 	err := runUserValFuncs(&user,
-		uv.idCheck(id),
+		uv.idCheck(),
 	)
 	if err != nil {
 		return err
@@ -280,9 +280,9 @@ func (uv *userValidator) setRememberUnset(user *User) error {
 	return nil
 }
 
-func (uv *userValidator) idCheck(n uint) userValFunc {
+func (uv *userValidator) idCheck() userValFunc {
 	return userValFunc(func(u *User) error {
-		if u.ID <= n {
+		if u.ID <= 0 {
 			return ErrIDInvalid
 		}
 		return nil
@@ -323,7 +323,7 @@ func (uv *userValidator) emailFormat(user *User) error {
 		return nil
 	}
 
-	if uv.emailRegexp.MatchString(user.Email) {
+	if !uv.emailRegexp.MatchString(user.Email) {
 		return ErrEmailInvalid
 	}
 

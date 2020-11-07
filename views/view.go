@@ -56,7 +56,7 @@ func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) 
 
 	err := v.Tmpl.ExecuteTemplate(&buf, v.Layout, data)
 	if err != nil {
-		http.Error(w, "something goes wrong", http.StatusInternalServerError)
+		http.Error(w, "something goes wrong. view render error", http.StatusInternalServerError)
 		return
 	}
 
